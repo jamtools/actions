@@ -1,12 +1,42 @@
 name: Build Tauri App
 
 on:
-  workflow_dispatch:
-  pull_request:
+    workflow_dispatch:
+    pull_request:
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Echo a message
-        run: echo "Hello, this is a message from the GitHub Actions workflow."
+    build:
+        strategy:
+            fail-fast: false
+            matrix:
+                platform: [macos-latest, ubuntu-22.04, windows-latest]
+
+        runs-on: ${{ matrix.platform }}
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install Node.js
+              uses: actions/setup-node@v4
+              with:
+                node-version: 20
+
+            - name: Install Rust stable
+              uses: dtolnay/rust-toolchain@stable
+
+            - name: Install create-tauri-app globally
+              run: npm install -g create-tauri-app@latest
+
+            - name: Scaffold a new Tauri project
+              run: npx create-tauri-app my-tauri-app -- --template vanilla --yes
+
+            - name: Install frontend dependencies
+              run: npm install
+              working-directory: ./my-tauri-app
+
+            - name: Fetch Rust dependencies
+              run: cargo fetch
+              working-directory: ./my-tauri-app/src-tauri
+
+            - name: Build Tauri application
+              run: npm run tauri build
+              working-directory: ./my-tauri-app
