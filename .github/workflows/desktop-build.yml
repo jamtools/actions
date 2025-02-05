@@ -1,42 +1,51 @@
 name: Build Tauri App
 
 on:
-    workflow_dispatch:
-    pull_request:
+  workflow_dispatch:
+  pull_request:
 
 jobs:
-    build:
-        strategy:
-            fail-fast: false
-            matrix:
-                platform: [macos-latest, ubuntu-22.04, windows-latest]
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest, ubuntu-22.04, windows-latest]
 
-        runs-on: ${{ matrix.platform }}
-        steps:
-            - uses: actions/checkout@v4
+    runs-on: ${{ matrix.platform }}
+    steps:
+    - uses: actions/checkout@v4
 
-            - name: Install Node.js
-              uses: actions/setup-node@v4
-              with:
-                node-version: 20
+    - name: Install Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
 
-            - name: Install Rust stable
-              uses: dtolnay/rust-toolchain@stable
+    - name: Install Rust stable
+      uses: dtolnay/rust-toolchain@stable
 
-            - name: Install create-tauri-app globally
-              run: npm install -g create-tauri-app@latest
+    - name: Install create-tauri-app globally
+      run: npm install -g create-tauri-app@latest
 
-            - name: Scaffold a new Tauri project
-              run: npx create-tauri-app my-tauri-app -- --template vanilla --yes
+    - name: Scaffold a new Tauri project
+      run: npx create-tauri-app my-tauri-app -- --template vanilla --yes
 
-            - name: Install frontend dependencies
-              run: npm install
-              working-directory: ./my-tauri-app
+    - name: Install frontend dependencies
+      run: npm install
+      working-directory: ./my-tauri-app
 
-            - name: Fetch Rust dependencies
-              run: cargo fetch
-              working-directory: ./my-tauri-app/src-tauri
+    - name: Fetch Rust dependencies
+      run: cargo fetch
+      working-directory: ./my-tauri-app/src-tauri
 
-            - name: Build Tauri application
-              run: npm run tauri build
-              working-directory: ./my-tauri-app
+    - name: Build Tauri application
+      run: npm run tauri build
+      working-directory: ./my-tauri-app
+
+    - name: Archive built artifacts
+      run: mkdir -p artifacts/${{ matrix.platform }} && cp -r ./my-tauri-app/src-tauri/target/release/bundle artifacts/${{ matrix.platform }}
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: tauri-build-${{ matrix.platform }}
+        path: artifacts/${{ matrix.platform }}
